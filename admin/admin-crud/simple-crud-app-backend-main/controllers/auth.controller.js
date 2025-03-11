@@ -4,33 +4,65 @@ const jwt = require("jsonwebtoken");
 
 const signUp = async (req, res) => {
   try {
-    const { name, email, password, isAdmin } = req.body; // Add isAdmin field
+    console.log("📌 Received Signup Request:", req.body); // Log request body
 
-    // Check if the user already exists
+    const { name, email, phone, password, isAdmin } = req.body; // Ensure phone is included
+
+    if (!name || !email || !phone || !password) {
+      console.log("❌ Missing Fields:", { name, email, phone, password });
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log("❌ Email already registered:", email);
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const role = isAdmin ? "admin" : "user";
 
-    // If isAdmin is true, set the role to "admin", otherwise default to "user"
-    const role = isAdmin ? "admin" : "user"; // Default to "user"
-
-    // Create the user
     const user = await User.create({
       name,
       email,
+      phone,
       password: hashedPassword,
-      role, // Set the role here
+      role,
     });
 
+    console.log("✅ User Created:", user);
     res.status(201).json(user);
+  } catch (error) {
+    console.error("❌ Signup Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const signInUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate token
+    const token = jwt.sign({ id: user._id, role: user.role }, "secret_key", { expiresIn: "1h" });
+
+    res.status(200).json({ user, token });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 const createAdmin = async (req, res) => {
   try {
@@ -89,4 +121,4 @@ const signIn = async (req, res) => {
   }
 };
 
-module.exports = { signUp, signIn, createAdmin };
+module.exports = { signUp, signIn, createAdmin,signInUser };

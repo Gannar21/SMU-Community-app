@@ -33,30 +33,34 @@ const getUser = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    console.log("📩 Received data:", req.body);
+    // Log the incoming request body
+    console.log("Received request body:", req.body);
 
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      console.log("❌ Missing required fields");
+    const { name, email, phone, password } = req.body;
+
+    // Check if all required fields are provided
+    if (!name || !email || !phone || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if email already exists
+    // Check if the email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log("❌ Email already registered:", email);
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    const user = await User.create({ name, email, password });
-    console.log("✅ User created:", user);
-
-    res.status(201).json(user);
+    // Create the new user
+    const user = await User.create({ name, email, phone, password });
+    return res.status(201).json(user);
   } catch (error) {
-    console.error("❌ Error creating user:", error);
-    res.status(500).json({ message: error.message });
+    console.error("Error creating user:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
+
+
+
+
 
 const updateUser = async (req, res) => {
   try {

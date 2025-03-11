@@ -1,9 +1,60 @@
-import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
 import styled from "styled-components/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
 const EventCalendar = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Default to today
+  const [dates, setDates] = useState([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date()); // Track start of the displayed week
+
+  useEffect(() => {
+    generateCalendarDates(currentWeekStart);
+    fetchEvents();
+  }, [currentWeekStart]);
+
+  const generateCalendarDates = (startDate) => {
+    const week = [];
+    const start = new Date(startDate);
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      week.push({
+        fullDate: date.toISOString().split("T")[0],
+        day: date.getDate(),
+        weekday: date.toLocaleDateString("en-US", { weekday: "short" }),
+      });
+    }
+    setDates(week);
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch("http://192.168.1.31:3000/api/events");
+      const data = await response.json();
+      setEvents(data);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToNextWeek = () => {
+    const nextWeekStart = new Date(currentWeekStart);
+    nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+    setCurrentWeekStart(nextWeekStart);
+  };
+
+  const goToPreviousWeek = () => {
+    const prevWeekStart = new Date(currentWeekStart);
+    prevWeekStart.setDate(currentWeekStart.getDate() - 7);
+    setCurrentWeekStart(prevWeekStart);
+  };
+
   return (
     <Container>
       {/* Header */}
@@ -12,58 +63,78 @@ const EventCalendar = () => {
         <ProfileImage source={{ uri: "https://i.pravatar.cc/150?img=3" }} />
       </Header>
 
-      {/* Date Strip */}
-      <DateStrip>
-        {["18 Mo", "19 Tu", "20 Wed", "21 Th", "22 Fr", "23 Sa", "24 Su"].map(
-          (date, index) => (
-            <DateItem key={index} active={index === 3}>
-              <DateText active={index === 3}>{date.split(" ")[0]}</DateText>
-              <DateSubText active={index === 3}>{date.split(" ")[1]}</DateSubText>
+      {/* Navigation Buttons */}
+      <WeekNavigation>
+        <NavButton onPress={goToPreviousWeek}>
+          <Icon name="chevron-left" size={24} color="white" />
+        </NavButton>
+
+        <DateStrip>
+          {dates.map((dateObj, index) => (
+            <DateItem
+              key={index}
+              active={selectedDate === dateObj.fullDate}
+              onPress={() => setSelectedDate(dateObj.fullDate)}
+            >
+              <DateText active={selectedDate === dateObj.fullDate}>
+                {dateObj.day}
+              </DateText>
+              <DateSubText active={selectedDate === dateObj.fullDate}>
+                {dateObj.weekday}
+              </DateSubText>
             </DateItem>
-          )
-        )}
-      </DateStrip>
+          ))}
+        </DateStrip>
 
-      {/* Today's Events */}
-      <SectionTitle>Today's Events</SectionTitle>
-      <ScrollView>
-        <EventItem>
-          <Time>15:00</Time>
+        <NavButton onPress={goToNextWeek}>
+          <Icon name="chevron-right" size={24} color="white" />
+        </NavButton>
+      </WeekNavigation>
+
+      {/* Events */}
+      <SectionTitle>Events for {selectedDate}</SectionTitle>
+
+      {loading ? (
+  <ActivityIndicator size="large" color="#2979ff" />
+) : (
+  <ScrollView>
+  {events.filter(event => {
+    if (!event.date) {
+      console.warn("Invalid event date:", event);
+      return false; // Skip events with missing dates
+    }
+
+    const eventDate = new Date(event.date).toISOString().split("T")[0];
+    return eventDate === selectedDate;
+  }).length > 0 ? (
+    events
+      .filter(event => {
+        if (!event.date) return false;
+        const eventDate = new Date(event.date).toISOString().split("T")[0];
+        return eventDate === selectedDate;
+      })
+      .map((event, index) => (
+        <EventItem key={index}>
+          <Time>{event.time}</Time>
           <EventCard>
-            <EventText>IEEE Club SMU</EventText>
-            <EventSubText>Tech Talk: Future of AI</EventSubText>
-            <EventSubText>B001</EventSubText>
-            <Attendees>
-              <Avatar source={{ uri: "https://i.pravatar.cc/40?img=4" }} />
-              <Avatar source={{ uri: "https://i.pravatar.cc/40?img=5" }} />
-            </Attendees>
+            <EventText>{event.title}</EventText>
+            <EventSubText>{event.description}</EventSubText>
+            <EventSubText>{event.location}</EventSubText>
           </EventCard>
         </EventItem>
+      ))
+  ) : (
+    <Text>No events available</Text>
+  )}
+</ScrollView>
 
-        <EventItem>
-          <Time>17:00</Time>
-          <EventCard>
-            <EventText>Melodies Club SMU</EventText>
-            <EventSubText>Jam Session</EventSubText>
-            <EventSubText>Music Room</EventSubText>
-            <Attendees>
-              <Avatar source={{ uri: "https://i.pravatar.cc/40?img=6" }} />
-              <Avatar source={{ uri: "https://i.pravatar.cc/40?img=7" }} />
-            </Attendees>
-          </EventCard>
-        </EventItem>
-      </ScrollView>
 
-      {/* Reminders */}
+)}
+
+
+      {/* Reminder */}
       <SectionTitle>Reminder</SectionTitle>
       <ReminderText>Don't forget your schedule for tomorrow</ReminderText>
-
-      <ReminderCard>
-        <IconContainer>
-          <Icon name="event" size={24} color="white" />
-        </IconContainer>
-        <ReminderTime>12:00 - 16:00</ReminderTime>
-      </ReminderCard>
 
       <ReminderCard>
         <IconContainer>
@@ -81,6 +152,7 @@ const EventCalendar = () => {
 };
 
 export default EventCalendar;
+
 const Container = styled.View`
   flex: 1;
   background-color: #f9fbff;
@@ -104,13 +176,26 @@ const ProfileImage = styled.Image`
   border-radius: 20px;
 `;
 
-const DateStrip = styled.View`
+const WeekNavigation = styled.View`
   flex-direction: row;
-  justify-content: space-around;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 10px;
 `;
 
-const DateItem = styled.View`
+const NavButton = styled.TouchableOpacity`
+  background-color: #2979ff;
+  padding: 10px;
+  border-radius: 5px;
+`;
+
+const DateStrip = styled.View`
+  flex-direction: row;
+  justify-content: space-around;
+  flex: 1;
+`;
+
+const DateItem = styled.TouchableOpacity`
   align-items: center;
   background-color: ${({ active }) => (active ? "#fbd6e0" : "transparent")};
   padding: 8px;
@@ -168,18 +253,6 @@ const EventText = styled.Text`
 const EventSubText = styled.Text`
   font-size: 14px;
   color: white;
-`;
-
-const Attendees = styled.View`
-  flex-direction: row;
-  margin-top: 5px;
-`;
-
-const Avatar = styled.Image`
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  margin-right: -8px;
 `;
 
 const ReminderCard = styled.View`

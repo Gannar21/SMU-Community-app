@@ -2,7 +2,8 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
-const { signUp, signIn } = require("../controllers/auth.controller.js");
+const { signUp, signIn, signInUser } = require("../controllers/auth.controller.js");
+
 
 const router = express.Router();
 
@@ -58,5 +59,6 @@ router.get("/me", async (req, res) => {
 // SignUp and SignIn routes for normal users
 router.post("/signup", signUp);
 router.post("/signin", signIn);
+router.post("/signin-user", signInUser);
 
 module.exports = router;

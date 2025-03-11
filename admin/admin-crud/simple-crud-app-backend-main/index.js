@@ -16,13 +16,25 @@ const app = express();
 console.log("📌 MongoDB URI:", process.env.MONGO_URI);
 
 // Enable CORS
+const allowedOrigins = [
+  "http://localhost:5173", // Vite frontend (Admin dashboard)
+  "http://localhost:8081", // React Native Metro bundler
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // Frontend URL (Vite)
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: "GET,POST,PUT,DELETE",
-    credentials: true,
+    credentials: true, // Required if using authentication (cookies, JWT, etc.)
   })
 );
+
 
 // Log incoming requests (for debugging)
 app.use((req, res, next) => {
