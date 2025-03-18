@@ -34,32 +34,56 @@ const getClub = async (req, res) => {
 
 const createClub = async (req, res) => {
     try {
-      const { name, email, description, logo } = req.body;
-  
-      const club = new Club({
-        name,
-        email,
-        description,
-        logo
-      });
-  
-      await club.save();
-      console.log("✅ Club created:", club);
-      res.status(201).json(club);
+        console.log("📌 Received request body:", req.body);
+        console.log("🖼️ Received file:", req.file);
+
+        const { name, email, description, president_id, isActive } = req.body;
+        if (!name || !email || !description) {
+            return res.status(400).json({ message: "Missing required fields: name, email, description" });
+        }
+
+        let logo = null;
+        if (req.file) {
+            logo = req.file.filename;
+        }
+
+        const newClub = new Club({
+            name,
+            email,
+            description,
+            logo, // Store GridFS file ID
+            president_id,
+            isActive,
+        });
+
+        await newClub.save();
+        console.log("✅ Club created:", newClub);
+        res.status(201).json(newClub);
     } catch (error) {
-      console.error("❌ Error creating club:", error);
-      res.status(500).json({ message: "Server Error" });
+        console.error("❌ Error creating club:", error);
+        res.status(500).json({ message: "Server Error" });
     }
-  };
-  
-  
+};
+
+
+
 
 const updateClub = async (req, res) => {
     try {
         const { id } = req.params;
         console.log(`📌 Updating club with ID: ${id}`);
 
-        const club = await Club.findByIdAndUpdate(id, req.body, { new: true });
+        const updateData = { ...req.body };
+        if (req.file) {
+            const oldClub = await Club.findById(id);
+            if (oldClub.logo) {
+                await gfs.files.deleteOne({ filename: oldClub.logo });
+            }
+            updateData.logo = req.file.filename;
+        }
+        
+
+        const club = await Club.findByIdAndUpdate(id, updateData, { new: true });
         if (!club) {
             console.log("❌ Club not found for update");
             return res.status(404).json({ message: "Club not found" });
@@ -99,4 +123,3 @@ module.exports = {
     updateClub,
     deleteClub,
 };
-

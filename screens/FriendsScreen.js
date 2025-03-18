@@ -2,54 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FontAwesome } from "@expo/vector-icons";
 
-const MembersScreen = ({ navigation }) => {
+const FriendsScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
-  const [allMembers, setAllMembers] = useState([]); // Store all users from backend
-  const [filteredMembers, setFilteredMembers] = useState([]); // Store search results
+  const [allFriends, setAllFriends] = useState([]); // Store all users from backend
+  const [filteredFriends, setFilteredFriends] = useState([]); // Store search results
   const [loading, setLoading] = useState(true);
   const [friendMessage, setFriendMessage] = useState('');
 
   useEffect(() => {
-    const fetchMembers = async () => {
+    const fetchFriends = async () => {
       try {
         const response = await fetch("http://192.168.1.31:3000/api/users");
         const data = await response.json();
-        setAllMembers(data); // Store all users from backend
+        setAllFriends(data); // Store all users from backend
       } catch (error) {
-        console.error("❌ Error fetching users:", error);
+        console.error("❌ Error fetching friends:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMembers();
+    fetchFriends();
   }, []);
 
   // Handle search functionality
   const handleSearch = (text) => {
     setSearch(text);
     if (text.trim() === "") {
-      setFilteredMembers([]); // Show blank until user starts typing
+      setFilteredFriends([]); // Show blank until user starts typing
     } else {
-      const filtered = allMembers.filter((member) =>
-        member.name.toLowerCase().includes(text.toLowerCase())
+      const filtered = allFriends.filter((friend) =>
+        friend.name.toLowerCase().includes(text.toLowerCase())
       );
-      setFilteredMembers(filtered);
+      setFilteredFriends(filtered);
     }
   };
 
   const handleAddFriend = (name) => {
-    setFriendMessage(`Friend request sent to ${name} !`);
+    setFriendMessage(`You added ${name} to your friend list!`);
     setTimeout(() => {
       setFriendMessage(''); // Clear message after 3 seconds
     }, 3000);
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.memberCard}>
+    <View style={styles.friendCard}>
       <Image source={{ uri: "https://randomuser.me/api/portraits/men/1.jpg" }} style={styles.profileImage} />
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{item.name}</Text>
+      <View style={styles.friendInfo}>
+        <Text style={styles.friendName}>{item.name}</Text>
         <Text style={styles.online}>Online</Text> 
       </View>
       <TouchableOpacity style={styles.addButton} onPress={() => handleAddFriend(item.name)}>
@@ -60,10 +60,10 @@ const MembersScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Members</Text>
+      <Text style={styles.title}>Friends</Text>
       <TextInput
         style={styles.searchBar}
-        placeholder="Search Members"
+        placeholder="Search Friends"
         value={search}
         onChangeText={handleSearch}
       />
@@ -72,11 +72,11 @@ const MembersScreen = ({ navigation }) => {
         <ActivityIndicator size="large" color="#007BFF" />
       ) : (
         <FlatList
-          data={filteredMembers} // Show results only when searching
+          data={filteredFriends} // Show results only when searching
           renderItem={renderItem}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.membersList}
-          ListEmptyComponent={search ? <Text style={styles.noResults}>No members found</Text> : null}
+          contentContainerStyle={styles.friendsList}
+          ListEmptyComponent={search ? <Text style={styles.noResults}>No friends found</Text> : null}
         />
       )}
 
@@ -85,6 +85,10 @@ const MembersScreen = ({ navigation }) => {
           <Text style={styles.friendMessage}>{friendMessage}</Text>
         </View>
       )}
+
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Text style={styles.buttonText}>Back</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -112,7 +116,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontSize: 16,
   },
-  membersList: {
+  friendsList: {
     flexGrow: 1,
   },
   noResults: {
@@ -121,7 +125,7 @@ const styles = StyleSheet.create({
     color: "#777",
     marginTop: 10,
   },
-  memberCard: {
+  friendCard: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
@@ -140,10 +144,10 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginRight: 20,
   },
-  memberInfo: {
+  friendInfo: {
     flex: 1,
   },
-  memberName: {
+  friendName: {
     fontSize: 20,
     fontWeight: '500',
     color: '#333',
@@ -186,4 +190,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MembersScreen;
+export default FriendsScreen;

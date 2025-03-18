@@ -5,7 +5,7 @@ export default function SplashScreen({ navigation }) {
   useEffect(() => {
     setTimeout(() => {
       navigation.replace('Login'); // Move to Login screen after 3 seconds
-    }, 3000);
+    }, 2000);
   }, []);
 
   return (
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#6495ED', // Blue background
+    backgroundColor: '#0083a9', // Blue background
   },
   logo: {
     width: 150,

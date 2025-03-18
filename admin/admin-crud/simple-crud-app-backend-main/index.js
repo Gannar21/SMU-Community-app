@@ -35,7 +35,6 @@ app.use(
   })
 );
 
-
 // Log incoming requests (for debugging)
 app.use((req, res, next) => {
   console.log(`🔹 ${req.method} request to ${req.url}`);
