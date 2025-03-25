@@ -24,11 +24,21 @@ export default function LoginScreen({ navigation }) {
         throw new Error(responseData.message || "Invalid credentials");
       }
 
-      // ✅ Save token in AsyncStorage
-      await AsyncStorage.setItem("token", responseData.token);
+      // Make sure userId is defined before calling toString
+      if (responseData.userId) {
+        // ✅ Save userId & token in AsyncStorage
+        await AsyncStorage.setItem("token", responseData.token);
+        await AsyncStorage.setItem("userId", responseData.userId.toString());
 
-      // ✅ Navigate to Home
-      navigation.replace("HomeTabs");
+        // ✅ Verify if userId is stored correctly
+        const storedUserId = await AsyncStorage.getItem("userId");
+        console.log("Stored User ID after login:", storedUserId);
+
+        // ✅ Navigate to Home
+        navigation.replace("HomeTabs");
+      } else {
+        throw new Error("User ID is undefined in response");
+      }
 
     } catch (error) {
       Alert.alert("Login Failed", error.message);

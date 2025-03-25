@@ -8,14 +8,56 @@ import SignUpScreen from '../screens/SignUpScreen';
 import HomeScreen from '../screens/HomeScreen';
 import EventCalendarScreen from '../screens/EventCalendarScreen';
 import MembersScreen from '../screens/MembersScreen';
-import ClubsScreen from '../screens/ClubsScreen';  // ✅ Added Clubs
-import ProfileScreen from '../screens/ProfileScreen'; // ✅ Added Profile
-import TasksScreen from '../screens/TasksScreen'; // ✅ Added Tasks Screen
+import ClubsScreen from '../screens/ClubsScreen';  
+import ProfileScreen from '../screens/ProfileScreen'; 
+import TasksScreen from '../screens/TasksScreen'; 
+import MyTasksScreen from '../screens/MyTasksScreen'; // ✅ Import My Tasks Screen
+import EventsScreen from '../screens/EventsScreen'; // Import the new EventsScreen
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ✅ Bottom Tab Navigator (Home + Calendar + Members + Clubs + Profile + Tasks)
+// ✅ Nested Stack for Tasks (Includes TasksScreen & MyTasksScreen)
+const TasksStack = createStackNavigator();
+
+function TasksStackNavigator() {
+  return (
+    <TasksStack.Navigator>
+      <TasksStack.Screen 
+        name="TasksMain" 
+        component={TasksScreen} 
+        options={{ title: 'Tasks' }}
+      />
+      <TasksStack.Screen 
+        name="MyTasks" 
+        component={MyTasksScreen} 
+        options={{ title: 'My Tasks' }}
+      />
+    </TasksStack.Navigator>
+  );
+}
+
+// ✅ Nested Stack for Clubs (Includes ClubsScreen & EventsScreen)
+const ClubsStack = createStackNavigator();
+
+function ClubsStackNavigator() {
+  return (
+    <ClubsStack.Navigator>
+      <ClubsStack.Screen 
+        name="ClubsMain" 
+        component={ClubsScreen} 
+        options={{ title: 'Clubs' }}
+      />
+      <ClubsStack.Screen 
+        name="EventsScreen" 
+        component={EventsScreen} 
+        options={{ title: 'Events' }}
+      />
+    </ClubsStack.Navigator>
+  );
+}
+
+// ✅ Bottom Tab Navigator (Includes Home + Calendar + Clubs + Tasks + Members + Profile)
 function HomeTabs() {
   return (
     <Tab.Navigator
@@ -39,19 +81,18 @@ function HomeTabs() {
           tabBarIcon: ({ color }) => <MaterialIcons name="event" size={24} color={color} />,
         }}
       />
-      
       <Tab.Screen 
         name="Clubs" 
-        component={ClubsScreen} 
+        component={ClubsStackNavigator} // ✅ Use the Clubs Stack Navigator
         options={{
           tabBarIcon: ({ color }) => <MaterialIcons name="celebration" size={24} color={color} />,
         }}
       />
       <Tab.Screen 
         name="Tasks" 
-        component={TasksScreen} 
+        component={TasksStackNavigator} // ✅ Use the Tasks Stack Navigator
         options={{
-          tabBarIcon: ({ color }) => <MaterialIcons name="edit" size={24} color={color} />, // "edit" icon
+          tabBarIcon: ({ color }) => <MaterialIcons name="edit" size={24} color={color} />,
         }}
       />
       <Tab.Screen 
@@ -61,7 +102,6 @@ function HomeTabs() {
           tabBarIcon: ({ color }) => <MaterialIcons name="group" size={24} color={color} />,
         }}
       />
-      {/* Move Profile tab to the far right by placing it last */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen} 
@@ -73,7 +113,7 @@ function HomeTabs() {
   );
 }
 
-// ✅ Stack Navigator (Includes SplashScreen first)
+// ✅ Main Stack Navigator (Includes Splash + Auth + Home)
 export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

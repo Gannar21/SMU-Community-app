@@ -57,11 +57,16 @@ const signInUser = async (req, res) => {
     // Generate token
     const token = jwt.sign({ id: user._id, role: user.role }, "secret_key", { expiresIn: "1h" });
 
-    res.status(200).json({ user, token });
+    // Send userId and token in the response
+    res.status(200).json({
+      userId: user._id,  // Explicitly send userId
+      token,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 
 const createAdmin = async (req, res) => {

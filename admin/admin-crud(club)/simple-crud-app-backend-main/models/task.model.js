@@ -10,18 +10,17 @@ const taskSchema = new mongoose.Schema({
     enum: ['Pending', 'In Progress', 'Completed'],
     default: 'Pending',
   },
-  deadline: {
-    type: Date,
-    required: true,
-  },
   category: {
     type: String,
     enum: ['club', 'administrative'],
     required: true,
   },
   assignedTo: {
-    type: String, // You can store either the username or 'Pending' if no one is assigned
-    default: 'Pending',
+    type: {
+      userId: mongoose.Schema.Types.ObjectId,
+      name: String,
+    },
+    default: null,
   },
   timeUploaded: {
     type: Date,
@@ -53,7 +52,7 @@ const taskSchema = new mongoose.Schema({
   description: {
     type: String,
     required: true,
-  }
+  },
 });
 
 const Task = mongoose.model('Task', taskSchema);

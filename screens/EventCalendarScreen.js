@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Modal, Image } from "react-native";
 import styled from "styled-components/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { Platform, StatusBar } from "react-native";
 
 const EventCalendar = () => {
   const [events, setEvents] = useState([]);
@@ -9,11 +10,20 @@ const EventCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]); // Default to today
   const [dates, setDates] = useState([]);
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date()); // Track start of the displayed week
+  const [currentMonth, setCurrentMonth] = useState(new Date().toLocaleDateString("en-US", { month: "long" }));
+  const [selectedEvent, setSelectedEvent] = useState(null); // Track selected event
+  const [eventDetailsVisible, setEventDetailsVisible] = useState(false); // Modal visibility
 
   useEffect(() => {
     generateCalendarDates(currentWeekStart);
     fetchEvents();
+    updateMonthForWeek(currentWeekStart); // Update month when week changes
   }, [currentWeekStart]);
+
+  useEffect(() => {
+    const month = new Date(selectedDate).toLocaleDateString("en-US", { month: "long" });
+    setCurrentMonth(month);
+  }, [selectedDate]);
 
   const generateCalendarDates = (startDate) => {
     const week = [];
@@ -29,6 +39,29 @@ const EventCalendar = () => {
       });
     }
     setDates(week);
+  };
+
+  const updateMonthForWeek = (startDate) => {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // End of the week
+
+    const startMonth = start.toLocaleDateString("en-US", { month: "long" });
+    const endMonth = end.toLocaleDateString("en-US", { month: "long" });
+
+    // If the week spans two months, show the month with more days
+    if (startMonth !== endMonth) {
+      const startMonthDays = 7 - (end.getDate() - start.getDate());
+      const endMonthDays = 7 - startMonthDays;
+
+      if (endMonthDays > startMonthDays) {
+        setCurrentMonth(endMonth);
+      } else {
+        setCurrentMonth(startMonth);
+      }
+    } else {
+      setCurrentMonth(startMonth);
+    }
   };
 
   const fetchEvents = async () => {
@@ -55,13 +88,28 @@ const EventCalendar = () => {
     setCurrentWeekStart(prevWeekStart);
   };
 
+  const handleEventClick = async (eventId) => {
+    try {
+      const response = await fetch(`http://192.168.1.31:3000/api/events/${eventId}`);
+      const data = await response.json();
+      setSelectedEvent(data);
+      setEventDetailsVisible(true);
+    } catch (error) {
+      console.error("Error fetching event details:", error);
+    }
+  };
+
   return (
     <Container>
       {/* Header */}
       <Header>
         <Title>Event Calendar</Title>
-        <ProfileImage source={{ uri: "https://i.pravatar.cc/150?img=3" }} />
       </Header>
+
+      {/* Month Indicator */}
+      <MonthIndicator>
+        {currentMonth}
+      </MonthIndicator>
 
       {/* Navigation Buttons */}
       <WeekNavigation>
@@ -95,46 +143,45 @@ const EventCalendar = () => {
       <SectionTitle>Events for {selectedDate}</SectionTitle>
 
       {loading ? (
-  <ActivityIndicator size="large" color="#2979ff" />
-) : (
-  <ScrollView>
-  {events.filter(event => {
-    if (!event.date) {
-      console.warn("Invalid event date:", event);
-      return false; // Skip events with missing dates
-    }
+        <ActivityIndicator size="large" color="#2979ff" />
+      ) : (
+        <ScrollView>
+          {events.filter(event => {
+            if (!event.date) {
+              console.warn("Invalid event date:", event);
+              return false; // Skip events with missing dates
+            }
 
-    const eventDate = new Date(event.date).toISOString().split("T")[0];
-    return eventDate === selectedDate;
-  }).length > 0 ? (
-    events
-      .filter(event => {
-        if (!event.date) return false;
-        const eventDate = new Date(event.date).toISOString().split("T")[0];
-        return eventDate === selectedDate;
-      })
-      .map((event, index) => (
-        <EventItem key={index}>
-          <Time>{event.time}</Time>
-          <EventCard>
-            <EventText>{event.title}</EventText>
-            <EventSubText>{event.description}</EventSubText>
-            <EventSubText>{event.location}</EventSubText>
-          </EventCard>
-        </EventItem>
-      ))
-  ) : (
-    <Text>No events available</Text>
-  )}
-</ScrollView>
-
-
-)}
-
+            const eventDate = new Date(event.date).toISOString().split("T")[0];
+            return eventDate === selectedDate;
+          }).length > 0 ? (
+            events
+              .filter(event => {
+                if (!event.date) return false;
+                const eventDate = new Date(event.date).toISOString().split("T")[0];
+                return eventDate === selectedDate;
+              })
+              .map((event, index) => (
+                <TouchableOpacity key={index} onPress={() => handleEventClick(event._id)}>
+                  <EventItem>
+                    <Time>{event.time}</Time>
+                    <EventCard>
+                      <EventText>{event.title}</EventText>
+                      <EventSubText>{event.description}</EventSubText>
+                      <EventSubText>{event.location}</EventSubText>
+                    </EventCard>
+                  </EventItem>
+                </TouchableOpacity>
+              ))
+          ) : (
+            <Text>No events available</Text>
+          )}
+        </ScrollView>
+      )}
 
       {/* Reminder */}
       <SectionTitle>Reminder</SectionTitle>
-      <ReminderText>Don't forget your schedule for tomorrow</ReminderText>
+      <ReminderText>Don't forget your next event!</ReminderText>
 
       <ReminderCard>
         <IconContainer>
@@ -143,16 +190,55 @@ const EventCalendar = () => {
         <ReminderTime>12:00 - 16:00</ReminderTime>
       </ReminderCard>
 
-      {/* Join Button */}
+      {/* View Button */}
       <JoinButton>
-        <JoinText>JOIN</JoinText>
+        <JoinText>VIEW</JoinText>
       </JoinButton>
+
+      {/* Event Details Modal */}
+      <Modal visible={eventDetailsVisible} animationType="slide" transparent={true}>
+        <ModalContainer>
+          {selectedEvent && (
+            <ModalContent>
+              {/* Close Button in Top-Right Corner */}
+              <CloseButton onPress={() => setEventDetailsVisible(false)}>
+                <Icon name="close" size={24} color="#2979ff" />
+              </CloseButton>
+
+              {/* Event Details */}
+              <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>{selectedEvent.title}</Text>
+
+              {/* Club Logo and Name */}
+              {selectedEvent.clubId && (
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                  <Image
+                    source={{ uri: selectedEvent.clubId.logo }}
+                    style={{ width: 50, height: 50, marginRight: 10 }} // Smaller logo
+                  />
+                  <Text style={{ fontSize: 16, fontWeight: "bold" }}>{selectedEvent.clubId.name}</Text>
+                </View>
+              )}
+
+              <Text style={{ fontSize: 14, marginBottom: 5 }}>Description: {selectedEvent.description}</Text>
+              <Text style={{ fontSize: 14, marginBottom: 5 }}>Location: {selectedEvent.location}</Text>
+              <Text style={{ fontSize: 14, marginBottom: 5 }}>Time: {selectedEvent.time}</Text>
+              <Text style={{ fontSize: 14, marginBottom: 5 }}>Date: {new Date(selectedEvent.date).toLocaleDateString()}</Text>
+
+              {/* Participate Button */}
+              <TouchableOpacity style={styles.participateButton}>
+                <Text style={styles.participateButtonText}>Participate!</Text>
+              </TouchableOpacity>
+            </ModalContent>
+          )}
+        </ModalContainer>
+      </Modal>
     </Container>
   );
 };
 
 export default EventCalendar;
 
+// Styled Components
 const Container = styled.View`
   flex: 1;
   background-color: #f9fbff;
@@ -163,6 +249,7 @@ const Header = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  padding-top: ${Platform.OS === "ios" ? StatusBar.currentHeight + 20 : 20}px;
 `;
 
 const Title = styled.Text`
@@ -170,29 +257,41 @@ const Title = styled.Text`
   font-weight: bold;
 `;
 
-const ProfileImage = styled.Image`
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
+const MonthIndicator = styled.Text`
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+  color: #2979ff;
 `;
 
 const WeekNavigation = styled.View`
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-top: 10px;
+  padding-left: 0px;
+  gap: 5px;
 `;
 
 const NavButton = styled.TouchableOpacity`
   background-color: #2979ff;
-  padding: 10px;
+  padding: 5px;
   border-radius: 5px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 0px;
 `;
 
 const DateStrip = styled.View`
   flex-direction: row;
-  justify-content: space-around;
+  justify-content: flex-start;
   flex: 1;
+  padding-left: 0px;
+  margin-left: -10px;
+  overflow: hidden;
 `;
 
 const DateItem = styled.TouchableOpacity`
@@ -289,3 +388,43 @@ const JoinText = styled.Text`
   font-weight: bold;
   color: white;
 `;
+
+// Styled components for modal
+const ModalContainer = styled.View`
+  flex: 1;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+`;
+
+const ModalContent = styled.View`
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  align-items: center;
+  position: relative; /* For positioning the close button */
+`;
+
+const CloseButton = styled.TouchableOpacity`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px;
+`;
+
+const styles = {
+  participateButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    backgroundColor: "#2979FF",
+    borderRadius: 50, // Make it circular
+    alignItems: "center",
+  },
+  participateButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+};

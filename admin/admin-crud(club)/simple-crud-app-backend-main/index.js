@@ -6,9 +6,9 @@ const cors = require("cors");
 
 const authRoute = require("./routes/auth.route.js");
 const userRoute = require("./routes/user.route.js");
-const clubRoute = require("./routes/club.route.js"); // Assuming you have this file
-const eventRoute = require("./routes/event.route.js"); // Adding event route
-const taskRoute = require("./routes/task.route.js"); // Add this line to import the task routes
+const clubRoute = require("./routes/club.route.js");
+const eventRoute = require("./routes/event.route.js");
+const taskRoute = require("./routes/task.route.js");
 
 const app = express();
 
@@ -31,7 +31,7 @@ app.use(
       }
     },
     methods: "GET,POST,PUT,DELETE",
-    credentials: true, // Required if using authentication (cookies, JWT, etc.)
+    credentials: true,
   })
 );
 
@@ -41,16 +41,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Increase request size limit to handle large payloads
+app.use(express.json({ limit: "10mb" })); // Increase JSON request size limit
+app.use(express.urlencoded({ limit: "10mb", extended: true })); // Increase URL-encoded request size limit
 
 // Routes
-app.use("/api/auth", authRoute);  // Authentication routes
-app.use("/api/users", userRoute); // User CRUD routes
-app.use("/api/clubs", clubRoute); // Club CRUD routes
-app.use("/api/events", eventRoute); // Event CRUD routes
-app.use("/api/tasks", taskRoute);  // Add this line for tasks routes
+app.use("/api/auth", authRoute);
+app.use("/api/users", userRoute);
+app.use("/api/clubs", clubRoute);
+app.use("/api/events", eventRoute);
+app.use("/api/tasks", taskRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello from Node API with Authentication, User, Club, Event, and Task Management");
@@ -68,3 +68,9 @@ mongoose
   .catch((error) => {
     console.error("❌ MongoDB Connection Failed!", error);
   });
+
+// Debug incoming request origins
+app.use((req, res, next) => {
+  console.log(req.headers.origin);
+  next();
+});

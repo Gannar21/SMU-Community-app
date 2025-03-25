@@ -1,5 +1,5 @@
 const Task = require("../models/task.model");
-const mongoose = require("mongoose");
+const User = require("../models/user.model"); // Import the User model
 
 const getTasks = async (req, res) => {
   try {
@@ -34,42 +34,75 @@ const getTask = async (req, res) => {
 
 const createTask = async (req, res) => {
   try {
-    const { name, status, deadline, category, assignedTo, dueTo, priority, comments, progress, description } = req.body;
+    const { name, status, category, assignedTo, dueTo, priority, description } = req.body;
 
-    // Ensure that description is provided
-    if (!description) {
-      return res.status(400).json({ message: "Description is required" });
-    }
-
-    const task = new Task({
+    const taskData = {
       name,
       status,
-      deadline,
       category,
-      assignedTo,
+      assignedTo: assignedTo && assignedTo.userId ? assignedTo : null,
       dueTo,
       priority,
-      comments,
-      progress,
-      description,  // Add description to the task object
-    });
+      description,
+    };
 
+    const task = new Task(taskData);
     await task.save();
-    console.log("✅ Task created:", task);
+
     res.status(201).json(task);
   } catch (error) {
-    console.error("❌ Error creating task:", error);
-    res.status(500).json({ message: "Server Error" });
+    console.error("Error creating task:", error);
+    res.status(400).json({ error: error.message });
   }
 };
 
+const assignTask = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    console.log("Assigning task:", req.params.id, "to user:", userId); // Debugging
+
+    // Check if the user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("User not found:", userId); // Debugging
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update the task with the assigned user and set status to "In Progress"
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      { 
+        assignedTo: { userId: user._id, name: user.name },
+        status: "In Progress" // Update status to "In Progress"
+      },
+      { new: true } // Return the updated task
+    );
+
+    // Check if the task exists
+    if (!task) {
+      console.log("Task not found:", req.params.id); // Debugging
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    console.log("Task assigned successfully:", task); // Debugging
+
+    // Return success response
+    res.json({ message: "Task assigned successfully", task });
+  } catch (error) {
+    console.error("❌ Error assigning task:", error); // Debugging
+    res.status(500).json({ message: "Error assigning task", error: error.message }); // Include error message
+  }
+};
 
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`📌 Updating task with ID: ${id}`);
 
-    const task = await Task.findByIdAndUpdate(id, req.body, { new: true });
+    const updatedFields = req.body;
+
+    const task = await Task.findByIdAndUpdate(id, updatedFields, { new: true });
     if (!task) {
       console.log("❌ Task not found for update");
       return res.status(404).json({ message: "Task not found" });
@@ -108,4 +141,5 @@ module.exports = {
   createTask,
   updateTask,
   deleteTask,
+  assignTask,
 };

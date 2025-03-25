@@ -28,6 +28,7 @@ export default function ProfileScreen({ navigation }) {
         if (!response.ok) throw new Error(data.message || "Failed to fetch user data");
 
         setUser(data);
+        await AsyncStorage.setItem("user", JSON.stringify(data)); // Save user data in AsyncStorage
       } catch (error) {
         console.error("❌ Error fetching user:", error.message);
         Alert.alert("Error", error.message);
