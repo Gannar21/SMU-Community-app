@@ -20,7 +20,7 @@ export default function ProfileScreen({ navigation }) {
           return;
         }
 
-        const response = await fetch("http://192.168.1.31:3000/api/auth/me", {
+        const response = await fetch("http://192.168.49.76:3000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

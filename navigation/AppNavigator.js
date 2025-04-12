@@ -11,13 +11,14 @@ import MembersScreen from '../screens/MembersScreen';
 import ClubsScreen from '../screens/ClubsScreen';  
 import ProfileScreen from '../screens/ProfileScreen'; 
 import TasksScreen from '../screens/TasksScreen'; 
-import MyTasksScreen from '../screens/MyTasksScreen'; // ✅ Import My Tasks Screen
-import EventsScreen from '../screens/EventsScreen'; // Import the new EventsScreen
+import MyTasksScreen from '../screens/MyTasksScreen';
+import EventsScreen from '../screens/EventsScreen';
+import ClubInfo from '../screens/ClubInfo';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ✅ Nested Stack for Tasks (Includes TasksScreen & MyTasksScreen)
+// Tasks Stack Navigator
 const TasksStack = createStackNavigator();
 
 function TasksStackNavigator() {
@@ -37,7 +38,7 @@ function TasksStackNavigator() {
   );
 }
 
-// ✅ Nested Stack for Clubs (Includes ClubsScreen & EventsScreen)
+// Clubs Stack Navigator
 const ClubsStack = createStackNavigator();
 
 function ClubsStackNavigator() {
@@ -45,19 +46,30 @@ function ClubsStackNavigator() {
     <ClubsStack.Navigator>
       <ClubsStack.Screen 
         name="ClubsMain" 
-        component={ClubsScreen} 
-        options={{ title: 'Clubs' }}
+        component={ClubsScreen}
+        options={{ headerShown: false }}
+      />
+      <ClubsStack.Screen 
+        name="ClubInfo" 
+        component={ClubInfo}
+        options={({ route }) => ({ 
+          title: route.params.club.name,
+          headerBackTitle: 'Back'
+        })}
       />
       <ClubsStack.Screen 
         name="EventsScreen" 
         component={EventsScreen} 
-        options={{ title: 'Events' }}
+        options={({ route }) => ({ 
+          title: route.params?.clubName || 'Events',
+          headerBackTitle: 'Back'
+        })}
       />
     </ClubsStack.Navigator>
   );
 }
 
-// ✅ Bottom Tab Navigator (Includes Home + Calendar + Clubs + Tasks + Members + Profile)
+// Bottom Tab Navigator
 function HomeTabs() {
   return (
     <Tab.Navigator
@@ -65,6 +77,14 @@ function HomeTabs() {
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#888',
         headerShown: false,
+        tabBarStyle: {
+          paddingBottom: 5,
+          height: 60,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginBottom: 5,
+        },
       }}
     >
       <Tab.Screen 
@@ -83,14 +103,14 @@ function HomeTabs() {
       />
       <Tab.Screen 
         name="Clubs" 
-        component={ClubsStackNavigator} // ✅ Use the Clubs Stack Navigator
+        component={ClubsStackNavigator}
         options={{
           tabBarIcon: ({ color }) => <MaterialIcons name="celebration" size={24} color={color} />,
         }}
       />
       <Tab.Screen 
         name="Tasks" 
-        component={TasksStackNavigator} // ✅ Use the Tasks Stack Navigator
+        component={TasksStackNavigator}
         options={{
           tabBarIcon: ({ color }) => <MaterialIcons name="edit" size={24} color={color} />,
         }}
@@ -113,7 +133,7 @@ function HomeTabs() {
   );
 }
 
-// ✅ Main Stack Navigator (Includes Splash + Auth + Home)
+// Main Stack Navigator
 export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

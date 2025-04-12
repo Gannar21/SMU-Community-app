@@ -17,7 +17,7 @@ export default function TasksScreen() {
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get('http://192.168.1.31:3000/api/tasks');
+      const response = await axios.get('http://192.168.49.76:3000/api/tasks');
       // Filter tasks to only show those with status 'Pending' and unassigned
       setTasks(response.data.filter(task => task.status === 'Pending' && !task.assignedTo));
     } catch (error) {
@@ -55,7 +55,7 @@ export default function TasksScreen() {
           {
             text: "Yes",
             onPress: async () => {
-              const response = await fetch(`http://192.168.1.31:3000/api/tasks/${taskId}/assign`, {
+              const response = await fetch(`http://192.168.49.76:3000/api/tasks/${taskId}/assign`, {
                 method: "PUT",
                 headers: {
                   "Content-Type": "application/json",

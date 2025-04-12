@@ -66,7 +66,7 @@ const EventCalendar = () => {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch("http://192.168.1.31:3000/api/events");
+      const response = await fetch("http://192.168.49.76:3000/api/events");
       const data = await response.json();
       setEvents(data);
     } catch (error) {
@@ -90,7 +90,7 @@ const EventCalendar = () => {
 
   const handleEventClick = async (eventId) => {
     try {
-      const response = await fetch(`http://192.168.1.31:3000/api/events/${eventId}`);
+      const response = await fetch(`http://192.168.49.76:3000/api/events/${eventId}`);
       const data = await response.json();
       setSelectedEvent(data);
       setEventDetailsVisible(true);

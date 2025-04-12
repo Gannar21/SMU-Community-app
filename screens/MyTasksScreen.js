@@ -22,7 +22,7 @@ export default function MyTasksScreen() {
           return;
         }
 
-        const response = await axios.get("http://192.168.1.31:3000/api/tasks");
+        const response = await axios.get("http://192.168.49.76:3000/api/tasks");
 
         // Filter tasks based on the assigned userId
         const userTasks = response.data.filter(
@@ -52,7 +52,7 @@ export default function MyTasksScreen() {
         updatedFields.assignedTo = null;
       }
 
-      const response = await axios.put(`http://192.168.1.31:3000/api/tasks/${taskId}`, updatedFields);
+      const response = await axios.put(`http://192.168.49.76:3000/api/tasks/${taskId}`, updatedFields);
 
       if (response.status === 200) {
         // Update the task list

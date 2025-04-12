@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  participateInEvent,
+
   createEvent,
   getAllClubs,
   getEventsByClubId,
@@ -39,6 +39,4 @@ router.put('/:id', updateEvent);
 // Add this to event.routes.js
 
 
-// Add this route
-router.post('/:id/participate', participateInEvent);
 module.exports = router;

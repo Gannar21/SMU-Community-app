@@ -12,7 +12,7 @@ const FriendsScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const response = await fetch("http://192.168.1.31:3000/api/users");
+        const response = await fetch("http://192.168.49.76:3000/api/users");
         const data = await response.json();
         setAllFriends(data); // Store all users from backend
       } catch (error) {

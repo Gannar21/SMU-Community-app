@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Image, FlatList, ActivityIndicator, Modal, TouchableOpacity, Alert } from "react-native";
+import { View, Image, FlatList, ActivityIndicator, Modal, TouchableOpacity, Alert, RefreshControl } from "react-native";
 import { Text, Button, Card } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from "react-native-vector-icons/MaterialIcons"; // Import icons for the modal
@@ -15,6 +15,7 @@ export default function HomeScreen({ navigation }) {
   const [isEventModalVisible, setIsEventModalVisible] = useState(false); // Track event modal visibility
   const [clubDetails, setClubDetails] = useState(null); // Track club details for the selected event
   const [profilePicture, setProfilePicture] = useState(null); // State for profile picture
+  const [refreshing, setRefreshing] = useState(false); // State for pull-to-refresh
 
   // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
@@ -22,34 +23,35 @@ export default function HomeScreen({ navigation }) {
     return today.toISOString().split("T")[0]; // "2025-03-12"
   };
 
+  const fetchEventsAndTasks = async () => {
+    try {
+      const todayDate = getTodayDate();
+
+      // Fetch all events and filter by today's date
+      const eventsResponse = await fetch("http://192.168.49.76:3000/api/events");
+      const allEvents = await eventsResponse.json();
+      const todayEvents = allEvents.filter((event) => event.date.startsWith(todayDate));
+      setEvents(todayEvents);
+
+      // Fetch all tasks and filter by today's timeUploaded field and unassigned tasks
+      const tasksResponse = await fetch("http://192.168.49.76:3000/api/tasks");
+      const allTasks = await tasksResponse.json();
+      const todayTasks = allTasks.filter(
+        (task) =>
+          task.timeUploaded &&
+          task.timeUploaded.startsWith(todayDate) &&
+          !task.assignedTo // Only show unassigned tasks
+      );
+      setTasks(todayTasks);
+    } catch (error) {
+      console.error("❌ Error fetching data:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // Stop the refreshing indicator
+    }
+  };
+
   useEffect(() => {
-    const fetchEventsAndTasks = async () => {
-      try {
-        const todayDate = getTodayDate();
-
-        // Fetch all events and filter by today's date
-        const eventsResponse = await fetch("http://192.168.1.31:3000/api/events");
-        const allEvents = await eventsResponse.json();
-        const todayEvents = allEvents.filter((event) => event.date.startsWith(todayDate));
-        setEvents(todayEvents);
-
-        // Fetch all tasks and filter by today's timeUploaded field and unassigned tasks
-        const tasksResponse = await fetch("http://192.168.1.31:3000/api/tasks");
-        const allTasks = await tasksResponse.json();
-        const todayTasks = allTasks.filter(
-          (task) =>
-            task.timeUploaded &&
-            task.timeUploaded.startsWith(todayDate) &&
-            !task.assignedTo // Only show unassigned tasks
-        );
-        setTasks(todayTasks);
-      } catch (error) {
-        console.error("❌ Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchEventsAndTasks();
   }, []);
 
@@ -69,6 +71,11 @@ export default function HomeScreen({ navigation }) {
     fetchProfilePicture();
   }, []);
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchEventsAndTasks();
+  };
+
   // Handle clicking on a task to show details
   const handleTaskPress = (task) => {
     setSelectedTask(task);
@@ -78,7 +85,7 @@ export default function HomeScreen({ navigation }) {
   // Handle clicking on an event to show details
   const handleEventPress = async (eventId) => {
     try {
-      const response = await fetch(`http://192.168.1.31:3000/api/events/${eventId}`);
+      const response = await fetch(`http://192.168.49.76:3000/api/events/${eventId}`);
       const data = await response.json();
       setSelectedEvent(data);
       setIsEventModalVisible(true);
@@ -110,7 +117,7 @@ export default function HomeScreen({ navigation }) {
           {
             text: "Yes",
             onPress: async () => {
-              const response = await fetch(`http://192.168.1.31:3000/api/tasks/${taskId}/assign`, {
+              const response = await fetch(`http://192.168.49.76:3000/api/tasks/${taskId}/assign`, {
                 method: "PUT",
                 headers: {
                   "Content-Type": "application/json",
@@ -142,86 +149,68 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.container}>
       {/* Profile Picture in the top-right */}
       <TouchableOpacity style={styles.profileIcon} onPress={() => navigation.navigate("Profile")}>
-        <Image
-          source={{ uri: profilePicture || "https://randomuser.me/api/portraits/men/3.jpg" }}
-          style={styles.profileImage}
-        />
+        <Icon name="account-circle" size={50} color="#007AFF" />
       </TouchableOpacity>
 
       {/* Logo in the top left */}
       <Image source={require("../assets/BlueLogo.png")} style={styles.logo} />
 
-      {/* Welcome Message */}
-      <Text style={styles.title}>Welcome to SMU Community App!</Text>
-
       {/* Events Today Section */}
-      <Text style={styles.sectionTitle}>Events Today</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" />
-      ) : events.length > 0 ? (
-        <FlatList
-          data={events}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleEventPress(item._id)}>
-              <Card style={styles.card}>
-                <Card.Content>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventDate}>
-                    {item.time} | {item.location}
-                  </Text>
-                </Card.Content>
-              </Card>
-            </TouchableOpacity>
-          )}
-          style={styles.list}
-        />
-      ) : (
-        <Text style={styles.noDataText}>No events today.</Text>
-      )}
-
-      {/* Button to navigate to Calendar */}
-      <Button
-        mode="contained"
-        onPress={() => navigation.navigate("Calendar")}
-        style={[
-          styles.button,
-          { marginTop: events.length > 0 || tasks.length > 0 ? 20 : 10 }, // Dynamically adjusts button position
-        ]}
-      >
-        View Event Calendar
-      </Button>
+      <FlatList
+        data={events}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleEventPress(item._id)}>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventDate}>
+                  {item.time} | {item.location}
+                </Text>
+              </Card.Content>
+            </Card>
+          </TouchableOpacity>
+        )}
+        style={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListHeaderComponent={
+          <>
+            <Text style={styles.title}>Welcome to SMU Community App!</Text>
+            <Text style={styles.sectionTitle}>Events Today</Text>
+          </>
+        }
+        ListEmptyComponent={
+          !loading && <Text style={styles.noDataText}>No events today.</Text>
+        }
+      />
 
       {/* Recently Added Tasks Section */}
-      <Text style={styles.sectionTitle}>Recently Added Tasks</Text>
-      {loading ? (
-        <ActivityIndicator size="large" color="#007AFF" />
-      ) : tasks.length > 0 ? (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleTaskPress(item)}>
-              <Card style={styles.card}>
-                <Card.Content>
-                  <Text style={styles.taskTitle}>{item.name}</Text>
-                  <Text style={styles.taskDetails}>
-                    Due: {new Date(item.dueTo).toLocaleDateString()} | Priority: {item.priority}
-                  </Text>
-                </Card.Content>
-              </Card>
-            </TouchableOpacity>
-          )}
-          style={styles.list}
-        />
-      ) : (
-        <Text style={styles.noDataText}>No tasks added today.</Text>
-      )}
-
-      {/* Button to navigate to TaskScreen */}
-      <Button mode="contained" onPress={() => navigation.navigate("Tasks")} style={styles.button}>
-        View All Tasks
-      </Button>
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleTaskPress(item)}>
+            <Card style={styles.card}>
+              <Card.Content>
+                <Text style={styles.taskTitle}>{item.name}</Text>
+                <Text style={styles.taskDetails}>
+                  Due: {new Date(item.dueTo).toLocaleDateString()} | Priority: {item.priority}
+                </Text>
+              </Card.Content>
+            </Card>
+          </TouchableOpacity>
+        )}
+        style={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListHeaderComponent={<Text style={styles.sectionTitle}>Recently Added Tasks</Text>}
+        ListEmptyComponent={
+          !loading && <Text style={styles.noDataText}>No tasks added today.</Text>
+        }
+      />
 
       {/* Task Details Modal */}
       <Modal visible={isTaskModalVisible} transparent={true} animationType="slide">
@@ -326,12 +315,12 @@ const styles = {
     paddingBottom: 20,
   },
   logo: {
-    width: 180, // Reduced from 200
-    height: 100, // Reduced from 120
+    width: 200, // Increased from 160
+    height: 120, // Increased from 100
     resizeMode: "contain",
     marginTop: 35,
     marginBottom: 20,
-    marginLeft: 0,
+    marginLeft: 0, // Added to move the logo further to the left
   },
   title: {
     fontSize: 20,
@@ -433,10 +422,5 @@ const styles = {
     top: 69, // Adjusted to be a little higher
     right: 20,
     zIndex: 1,
-  },
-  profileImage: {
-    width: 50, // Increased from 40
-    height: 50, // Increased from 40
-    borderRadius: 25, // Adjusted to match the new size
   },
 };

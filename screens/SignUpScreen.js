@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import axios from "axios";
 
-const API_URL = "http://192.168.1.31:3000/api/auth/signup";
+const API_URL = "http://192.168.49.76:3000/api/auth/signup";
 
 const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState("");

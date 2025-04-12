@@ -14,7 +14,7 @@ export default function EventsScreen({ route }) {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch(`http://192.168.1.31:3000/api/events/club/${clubId}`);
+                const response = await fetch(`http://192.168.49.76:3000/api/events/club/${clubId}`);
                 const data = await response.json();
                 setEvents(data);
             } catch (error) {
@@ -30,7 +30,7 @@ export default function EventsScreen({ route }) {
     // Function to handle event press and fetch details
     const handleEventPress = async (eventId) => {
         try {
-            const response = await fetch(`http://192.168.1.31:3000/api/events/${eventId}`);
+            const response = await fetch(`http://192.168.49.76:3000/api/events/${eventId}`);
             const data = await response.json();
             setSelectedEvent(data); // Set the selected event with fetched details
             setModalVisible(true); // Show the modal

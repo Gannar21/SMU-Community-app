@@ -202,46 +202,7 @@ const getAllEvents = async (req, res) => {
     }
   };
 
-  const participateInEvent = async (req, res) => {
-    const { id } = req.params;
-    const { userId } = req.body; // Get userId from request body
   
-    try {
-      // Check if user already participated
-      const participation = await Participation.findOne({ 
-        userId, 
-        eventId: id 
-      });
-  
-      if (participation) {
-        return res.status(400).json({ 
-          message: 'You have already participated in this event' 
-        });
-      }
-  
-      // Increment participants count
-      const event = await Event.findByIdAndUpdate(
-        id,
-        { $inc: { participants: 1 } },
-        { new: true }
-      );
-  
-      if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
-      }
-  
-      // Record participation
-      await Participation.create({
-        userId,
-        eventId: id
-      });
-  
-      res.status(200).json(event);
-    } catch (error) {
-      console.error('❌ Error participating in event:', error);
-      res.status(500).json({ message: error.message });
-    }
-  };
   
 // Fetch event details by ID
 const getEventById = async (req, res) => {
@@ -260,7 +221,6 @@ const getEventById = async (req, res) => {
   };
 
 module.exports = {
- participateInEvent,
   createEvent,
   getAllClubs,
   getEventsByMonth,

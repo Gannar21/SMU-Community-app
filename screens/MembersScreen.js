@@ -1,35 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FontAwesome } from "@expo/vector-icons";
+import { useFocusEffect } from '@react-navigation/native'; // Add this import
 
 const MembersScreen = ({ navigation }) => {
   const [search, setSearch] = useState('');
-  const [allMembers, setAllMembers] = useState([]); // Store all users from backend
-  const [filteredMembers, setFilteredMembers] = useState([]); // Store search results
+  const [allMembers, setAllMembers] = useState([]);
+  const [filteredMembers, setFilteredMembers] = useState([]);
+  const [suggestedMembers, setSuggestedMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [friendMessage, setFriendMessage] = useState('');
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const response = await fetch("http://192.168.1.31:3000/api/users");
-        const data = await response.json();
-        setAllMembers(data); // Store all users from backend
-      } catch (error) {
-        console.error("❌ Error fetching users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMembers();
+  // Function to get random suggestions
+  const getRandomSuggestions = useCallback((members, count) => {
+    const shuffled = [...members].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
   }, []);
 
-  // Handle search functionality
+  // Fetch members and set random suggestions
+  const fetchMembers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://192.168.49.76:3000/api/users");
+      const data = await response.json();
+      setAllMembers(data);
+      setSuggestedMembers(getRandomSuggestions(data, 5)); // Get new random suggestions
+    } catch (error) {
+      console.error("❌ Error fetching users:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [getRandomSuggestions]);
+
+  // Refresh suggestions when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (allMembers.length > 0) {
+        setSuggestedMembers(getRandomSuggestions(allMembers, 5)); // Refresh with new random members
+      }
+    }, [allMembers, getRandomSuggestions])
+  );
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
   const handleSearch = (text) => {
     setSearch(text);
     if (text.trim() === "") {
-      setFilteredMembers([]); // Show blank until user starts typing
+      setFilteredMembers([]);
     } else {
       const filtered = allMembers.filter((member) =>
         member.name.toLowerCase().includes(text.toLowerCase())
@@ -39,20 +58,26 @@ const MembersScreen = ({ navigation }) => {
   };
 
   const handleAddFriend = (name) => {
-    setFriendMessage(`Friend request sent to ${name} !`);
+    setFriendMessage(`Friend request sent to ${name}!`);
     setTimeout(() => {
-      setFriendMessage(''); // Clear message after 3 seconds
+      setFriendMessage('');
     }, 3000);
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.memberCard}>
-      <Image source={{ uri: "https://randomuser.me/api/portraits/men/1.jpg" }} style={styles.profileImage} />
+      <Image 
+        source={{ uri: item.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg" }} 
+        style={styles.profileImage} 
+      />
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.name}</Text>
         <Text style={styles.online}>Online</Text> 
       </View>
-      <TouchableOpacity style={styles.addButton} onPress={() => handleAddFriend(item.name)}>
+      <TouchableOpacity 
+        style={styles.addButton} 
+        onPress={() => handleAddFriend(item.name)}
+      >
         <FontAwesome name="plus" size={20} color="white" />
       </TouchableOpacity>
     </View>
@@ -63,20 +88,37 @@ const MembersScreen = ({ navigation }) => {
       <Text style={styles.title}>Members</Text>
       <TextInput
         style={styles.searchBar}
-        placeholder="Search Members"
+        placeholder="Make some new friends!"
         value={search}
         onChangeText={handleSearch}
       />
+
+      {/* Suggestions Section - Only shown when not searching */}
+      {!search && suggestedMembers.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <Text style={styles.suggestionsTitle}>Suggestions</Text>
+          <FlatList
+            data={suggestedMembers}
+            renderItem={renderItem}
+            keyExtractor={(item) => item._id}
+            scrollEnabled={false}
+          />
+        </View>
+      )}
 
       {loading ? (
         <ActivityIndicator size="large" color="#007BFF" />
       ) : (
         <FlatList
-          data={filteredMembers} // Show results only when searching
+          data={filteredMembers}
           renderItem={renderItem}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.membersList}
-          ListEmptyComponent={search ? <Text style={styles.noResults}>No members found</Text> : null}
+          ListEmptyComponent={
+            search ? (
+              <Text style={styles.noResults}>No members found</Text>
+            ) : null
+          }
         />
       )}
 
@@ -88,6 +130,10 @@ const MembersScreen = ({ navigation }) => {
     </View>
   );
 };
+
+// ... (keep the same styles as before)
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -112,6 +158,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     fontSize: 16,
   },
+  suggestionsContainer: {
+    marginBottom: 20,
+  },
+  suggestionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 10,
+  },
   membersList: {
     flexGrow: 1,
   },
@@ -124,7 +179,7 @@ const styles = StyleSheet.create({
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
     padding: 15,
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -171,18 +226,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     textAlign: 'center',
-  },
-  backButton: {
-    backgroundColor: '#007BFF',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
   },
 });
 
